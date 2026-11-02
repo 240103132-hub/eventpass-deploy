@@ -68,3 +68,4 @@ frontend/src/httpApi.js        real HTTP client
 - **Railway**: Supported via Docker Compose / Dockerfile.
 - **Railway**: Configured via `railway.json` using the multi-stage Dockerfile and Railway PostgreSQL plugin.
 - **Vercel**: Frontend-only deployment using `vercel.json` (pointing to the backend hosted on Render/Railway). Note: Vercel does not run Docker containers.
+- **AWS CloudFormation**: Automated infrastructure stack using `infra/cloudformation.yml` on EC2 t3.micro (Free Tier) with Docker Compose.
