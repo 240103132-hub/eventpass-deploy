@@ -70,3 +70,4 @@ frontend/src/httpApi.js        real HTTP client
 - **Vercel**: Frontend-only deployment using `vercel.json` (pointing to the backend hosted on Render/Railway). Note: Vercel does not run Docker containers.
 - **AWS CloudFormation**: Automated infrastructure stack using `infra/cloudformation.yml` on EC2 t3.micro (Free Tier) with Docker Compose.
 - **CI/CD**: GitHub Actions runs automated tests (pytest + frontend build) and triggers auto-redeploy on pushes to `main`.
+- **E2E Testing**: Automated end-to-end tests implemented using Playwright (`e2e/` directory).
