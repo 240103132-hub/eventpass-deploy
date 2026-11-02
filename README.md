@@ -62,3 +62,7 @@ frontend/src/api.js            the only place that chooses mock or real API
 frontend/src/mockApi.js        mock implementing docs/openapi.yml
 frontend/src/httpApi.js        real HTTP client
 ```
+
+## Deployment
+- **Render**: Deployed via Dockerfile and `render.yaml` blueprint.
+- **Railway**: Supported via Docker Compose / Dockerfile.
