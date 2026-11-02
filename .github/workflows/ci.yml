@@ -1,13 +1,13 @@
-name: CI
+name: CI/CD
 
 on:
   push:
-    branches: [ main, "feature/**" ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  test-and-deploy:
     runs-on: ubuntu-latest
 
     services:
@@ -60,3 +60,10 @@ jobs:
           cd frontend
           npm ci
           npm run build
+
+      - name: Trigger Render Deploy on Main
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK"
