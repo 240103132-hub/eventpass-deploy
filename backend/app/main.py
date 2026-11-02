@@ -2,12 +2,13 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import schemas as s
@@ -143,6 +144,18 @@ def create_app(service: Optional[TicketingService] = None) -> FastAPI:
     @app.post("/api/tickets/verify", response_model=s.ScanOut, response_model_exclude_none=True)
     def verify(body: s.ScanIn, service: TicketingService = Depends(svc), staff=Depends(current_staff)):
         return service.verify_ticket(staff, body.code, body.event_id)
+
+    # ---------- built React app (served only if the folder exists) ----------
+    static_dir = Path(os.environ.get("STATIC_DIR", Path(__file__).resolve().parents[2] / "frontend" / "dist")).resolve()
+    if (static_dir / "index.html").is_file():
+        @app.get("/{path:path}", include_in_schema=False)
+        def frontend(path: str):
+            if path == "api" or path.startswith("api/"):
+                raise StarletteHTTPException(status_code=404, detail="Not Found")
+            file = (static_dir / path).resolve()
+            if path and file.is_file() and static_dir in file.parents:
+                return FileResponse(file)
+            return FileResponse(static_dir / "index.html")  # React Router pages
 
     return app
 

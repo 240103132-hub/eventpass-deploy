@@ -1,7 +1,8 @@
 // Real implementation of the same interface as mockApi.js, talking to the FastAPI backend (docs/openapi.yml).
 // Errors are thrown as ApiError { status, code, detail }, exactly like the mock does.
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Production build: the API is on the same origin (served by FastAPI). Dev: backend on port 8000.
+const BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api');
 const TOKEN_KEY = 'eventpass_token';
 
 export class ApiError extends Error {
