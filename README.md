@@ -66,3 +66,4 @@ frontend/src/httpApi.js        real HTTP client
 ## Deployment
 - **Render**: Deployed via Dockerfile and `render.yaml` blueprint.
 - **Railway**: Supported via Docker Compose / Dockerfile.
+- **Railway**: Configured via `railway.json` using the multi-stage Dockerfile and Railway PostgreSQL plugin.
