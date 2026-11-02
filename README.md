@@ -67,3 +67,4 @@ frontend/src/httpApi.js        real HTTP client
 - **Render**: Deployed via Dockerfile and `render.yaml` blueprint.
 - **Railway**: Supported via Docker Compose / Dockerfile.
 - **Railway**: Configured via `railway.json` using the multi-stage Dockerfile and Railway PostgreSQL plugin.
+- **Vercel**: Frontend-only deployment using `vercel.json` (pointing to the backend hosted on Render/Railway). Note: Vercel does not run Docker containers.
