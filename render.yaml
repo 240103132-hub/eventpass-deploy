@@ -1,10 +1,13 @@
 services:
   - type: web
     name: eventpass
-    env: docker
+    runtime: docker
     region: frankfurt
     plan: free
     branch: main
+    # CI (GitHub Actions) triggers the deploy through a deploy hook after all tests pass
+    autoDeployTrigger: "off"
+    healthCheckPath: /api/venues
     envVars:
       - key: DATABASE_URL
         fromDatabase:
