@@ -27,6 +27,12 @@ jobs:
           cd backend
           pytest
 
+      - name: Start backend server for E2E
+        run: |
+          cd backend
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          sleep 3
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,16 +40,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies and build
+      - name: Install frontend dependencies and Playwright
         run: |
           cd frontend
           npm ci
           npm run build
-
-      - name: Install Playwright Browsers with dependencies
-        run: |
           npx playwright install --with-deps
 
       - name: Run Playwright E2E tests
         run: |
+          cd frontend
           npx playwright test
