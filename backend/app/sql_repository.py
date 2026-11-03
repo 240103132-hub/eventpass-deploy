@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from .database_url import normalize_database_url
 from .db_models import (Base, EventRow, HoldRow, OrderRow, SoldRow, StaffRow, TicketRow, TokenRow, VenueRow)
 
 EVENT_FIELDS = ("id", "title", "description", "image_url", "venue_id", "hall_id", "starts_at", "mode",
@@ -27,6 +28,7 @@ def _dict(row, fields):
 
 class SqlRepository:
     def __init__(self, url="sqlite:///eventpass.sqlite3"):
+        url = normalize_database_url(url)  # postgres:// -> postgresql+psycopg2://
         options = {}
         if url.startswith("sqlite"):
             options["connect_args"] = {"check_same_thread": False}
