@@ -73,7 +73,11 @@ jobs:
         run: docker compose up --build -d --wait
       - name: App answers with seeded events
         run: |
-          curl -fsS --retry 20 --retry-connrefused --retry-delay 2 http://localhost:8000/api/events | grep -q "Astana"
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/events | grep -q "Astana"; then ok=1; break; fi
+            echo "waiting for app ($i/30)..."; sleep 2
+          done
+          [ "$ok" = "1" ] || { echo "API did not return seeded events"; exit 1; }
           curl -fsS http://localhost:8000/ | grep -qi "<div id=\"root\""
       - name: Show app logs on failure
         if: failure()
