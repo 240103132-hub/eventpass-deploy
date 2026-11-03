@@ -7,9 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  test-and-deploy:
+  backend:
+    name: Backend tests (PostgreSQL)
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:15-alpine
@@ -20,50 +20,81 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
-
+          --health-retries 10
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-
-      - name: Install backend dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest httpx psycopg2-binary
-
-      - name: Run backend tests
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Apply Alembic migrations to PostgreSQL
+        working-directory: backend
         env:
-          DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/eventpass
-        run: |
-          cd backend
-          pytest
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eventpass
+        run: alembic upgrade head
+      - name: Unit + API tests and PostgreSQL integration test
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eventpass
+        run: python -m pytest -v
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+      - name: Build
+        working-directory: frontend
+        run: npm run build
 
-      - name: Install frontend dependencies and build
+  docker:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start app + database
+        run: docker compose up --build -d --wait
+      - name: App answers with seeded events
         run: |
-          cd frontend
-          npm ci
-          npm run build
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/events | grep -q "Astana"; then ok=1; break; fi
+            echo "waiting for app ($i/30)..."; sleep 2
+          done
+          [ "$ok" = "1" ] || { echo "API did not return seeded events"; exit 1; }
+          curl -fsS http://localhost:8000/ | grep -qi "<div id=\"root\""
+      - name: Show app logs on failure
+        if: failure()
+        run: docker compose logs app
 
-      - name: Trigger Render Deploy on Main
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.RENDER_DEPLOY_HOOK != ''
+  deploy:
+    name: Redeploy
+    needs: [backend, frontend, docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          curl -X POST "$RENDER_DEPLOY_HOOK"
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK secret is not set yet - skipping"
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
