@@ -47,7 +47,7 @@ def create_app(service: Optional[TicketingService] = None) -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_origin_regex=r"(http://(localhost|127\.0\.0\.1):\d+|https://[a-z0-9-]+\.vercel\.app)",
         allow_methods=["*"],
         allow_headers=["*"],
     )
