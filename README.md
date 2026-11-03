@@ -71,3 +71,8 @@ frontend/src/httpApi.js        real HTTP client
 - **AWS CloudFormation**: Automated infrastructure stack using `infra/cloudformation.yml` on EC2 t3.micro (Free Tier) with Docker Compose.
 - **CI/CD**: GitHub Actions runs automated tests (pytest + frontend build) and triggers auto-redeploy on pushes to `main`.
 - **E2E Testing**: Automated end-to-end tests implemented using Playwright (`e2e/` directory).
+
+## Live demo
+- Render (Docker + Render PostgreSQL): https://eventpass-qwtp.onrender.com
+- CI status: ![CI](https://github.com/240103132-hub/eventpass-deploy/actions/workflows/ci.yml/badge.svg)
+- Note: free Render web services sleep after ~15 minutes without traffic, so the first request can take up to a minute. The free Render PostgreSQL database expires 30 days after creation.
