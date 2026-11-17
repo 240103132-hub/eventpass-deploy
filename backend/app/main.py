@@ -5,6 +5,20 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+# Setup OpenTelemetry
+resource = Resource.create(attributes={"service.name": os.environ.get("OTEL_SERVICE_NAME", "eventpass-service")})
+provider = TracerProvider(resource=resource)
+processor = BatchSpanProcessor(OTLPSpanExporter())
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+
 from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -163,6 +177,7 @@ def create_app(service: Optional[TicketingService] = None) -> FastAPI:
                 return FileResponse(file)
             return FileResponse(static_dir / "index.html")  # React Router pages
 
+    FastAPIInstrumentor.instrument_app(app)
     return app
 
 
