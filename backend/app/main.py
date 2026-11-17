@@ -84,6 +84,12 @@ def create_app(service: Optional[TicketingService] = None) -> FastAPI:
     def current_staff(service: TicketingService = Depends(svc), token: Optional[str] = Depends(bearer)):
         return service.staff_from_token(token)
 
+    @app.get("/api/health", include_in_schema=False)
+    def health():
+        version = (os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+                   or os.environ.get("APP_VERSION", "dev"))
+        return {"status": "ok", "env": os.environ.get("APP_ENV", "local"), "version": version}
+
     # ---------- catalog ----------
     @app.get("/api/venues", response_model=list[s.VenueOut])
     def list_venues(service: TicketingService = Depends(svc)):
