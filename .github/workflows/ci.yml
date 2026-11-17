@@ -113,19 +113,3 @@ jobs:
       - name: Show app logs on failure
         if: failure()
         run: docker compose logs app
-
-  deploy:
-    name: Redeploy
-    needs: [backend, frontend, docker, e2e]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Render deploy
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "RENDER_DEPLOY_HOOK secret is not set yet - skipping"
-            exit 0
-          fi
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"

@@ -1,0 +1,68 @@
+name: Promote to production
+
+# Manual trigger: Actions -> "Promote to production" -> Run workflow.
+# Flow: verify that development runs the commit -> wait for approval (production environment)
+#       -> deploy exactly that commit to Render -> verify production.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to promote (empty = head of the branch you run this on)"
+        required: false
+
+concurrency: promote-production
+
+jobs:
+  verify-dev:
+    name: Verify development
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.pick.outputs.sha }}
+    steps:
+      - id: pick
+        env:
+          SHA: ${{ inputs.sha || github.sha }}
+        run: echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - name: Development is healthy and runs this commit
+        env:
+          DEV_URL: ${{ vars.DEV_URL }}
+          SHA: ${{ steps.pick.outputs.sha }}
+        run: |
+          [ -n "$DEV_URL" ] || { echo "Repository variable DEV_URL is not set"; exit 1; }
+          for i in $(seq 1 40); do
+            body=$(curl -fsS "$DEV_URL/api/health" || true)
+            echo "dev: $body"
+            if echo "$body" | grep -q '"env":"development"' && echo "$body" | grep -q "\"version\":\"$SHA"; then ok=1; break; fi
+            sleep 15
+          done
+          [ "$ok" = "1" ] || { echo "Development is not running $SHA"; exit 1; }
+          curl -fsS "$DEV_URL/api/events" | grep -q "Astana"
+
+  promote:
+    name: Deploy to production
+    needs: verify-dev
+    runs-on: ubuntu-latest
+    environment:
+      name: production # requires manual approval (configured in repo settings)
+      url: ${{ vars.PROD_URL }}
+    steps:
+      - name: Trigger Render deploy of this exact commit
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          SHA: ${{ needs.verify-dev.outputs.sha }}
+        run: |
+          [ -n "$RENDER_DEPLOY_HOOK" ] || { echo "Secret RENDER_DEPLOY_HOOK is not set"; exit 1; }
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK}&ref=${SHA}"
+      - name: Production runs the promoted commit
+        env:
+          PROD_URL: ${{ vars.PROD_URL }}
+          SHA: ${{ needs.verify-dev.outputs.sha }}
+        run: |
+          for i in $(seq 1 60); do
+            body=$(curl -fsS "$PROD_URL/api/health" || true)
+            echo "prod: $body"
+            if echo "$body" | grep -q '"env":"production"' && echo "$body" | grep -q "\"version\":\"$SHA"; then ok=1; break; fi
+            sleep 20
+          done
+          [ "$ok" = "1" ] || { echo "Production did not start running $SHA in time"; exit 1; }
+          curl -fsS "$PROD_URL/api/events" | grep -q "Astana"
